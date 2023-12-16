@@ -1,12 +1,14 @@
-import mongoose from "mongoose"
-import Authenticator from "./authenticator";
+import { Schema, model } from "mongoose"
+import { IUser } from "../interfaces/user";
 
-const userSchema = new mongoose.Schema({
+const userSchema = new Schema<IUser>({
     username: String,
-    currentChallenge: String,
-    devices: [Authenticator.schema]
+    sites: [{
+        type: Schema.Types.ObjectId,
+        ref: "Site",
+    }],
 });
 
-const User = mongoose.model("User", userSchema);
+const User = model<IUser>("User", userSchema);
 
 export default User;
