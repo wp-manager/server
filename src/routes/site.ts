@@ -4,6 +4,5 @@ const router = express.Router();
 
 router.all("/:uri/wp-json/*", siteExists, proxySite);
 
-
 export default router;
 
