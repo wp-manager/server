@@ -86,17 +86,38 @@ const proxyWPE = async (req, res) => {
 
     // include ?a params
     await wpeApi.request(req.method, proxyPath, req.query, req.body)
-    .then((response) => response.json())
-    .then((data) => {
-        res.json(data);
-        return;
-    }).catch((error) => {
-        res.json({
-            error: error.message,
-        });
-        return;
-    });
+    .then(async (response) => {
+        let responseText = await response.text();
 
+        if(responseText === "") {
+            res.json({
+                ok: true,
+            });
+            return;
+        }
+
+        let responseJson;
+
+        try {
+            responseJson = JSON.parse(responseText);
+            if(responseJson.ok){
+                res.json(responseJson);
+                return;
+            }
+        } catch (error) {
+            res.json({
+                error: error.message,
+            });
+            return;
+        }
+
+        if(responseJson.ok){
+            res.json(responseJson);
+            return;
+        }
+
+        res.json(responseJson);
+    });
     return;
 };
 

@@ -37,7 +37,7 @@ class WPEngineAPI {
             url: url.toString(),
             requestOptions,
         };
-        
+
         return fetch(url.toString(), requestOptions);
        
     }

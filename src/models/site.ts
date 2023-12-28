@@ -8,10 +8,7 @@ const siteSchema = new Schema<ISite>({
         ref: "User",
     },
     auth: String,
-    wpengineInstall: {
-        type: Schema.Types.ObjectId,
-        ref: "WPEngineInstall",
-    }
+    wpeInstallId: String,
 });
 
 const Site = model<ISite>("Site", siteSchema);

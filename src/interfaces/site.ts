@@ -5,7 +5,7 @@ interface ISite {
     uri: string;
     user: IUser;
     auth: string;
-    wpengineInstall: IWPEngineInstall;
+    wpeInstallId: string;
 }
 
 export { ISite }
