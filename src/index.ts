@@ -1,91 +1,113 @@
+// Define environment variable defaults
+// Falsy values mean that the user must provide a value
+const envDefaults = {
+    SERVER_HOST: "localhost",
+    SERVER_PORT: 443,
+    CORS_ALLOWED_ORIGINS: "https://localhost:5173",
+    CERTIFICATE_CERT: "certs/cert.pem",
+    CERTIFICATE_KEY: "certs/key.pem",
+};
+
+// Set environment variables to defaults if they are not already set
+Object.keys(envDefaults).forEach((key) => {
+    if (!process.env[key]) {
+        if(!envDefaults[key]) {
+            throw new Error(`Missing required environment variable ${key}`);
+        }
+
+        console.info(`Setting environment variable ${key} to default value ${envDefaults[key]}`);
+
+        process.env[key] = envDefaults[key];
+    }
+});
+
+import fs from "fs";
+
+// More specific environment variable checks
+if(!fs.existsSync(process.env.CERTIFICATE_CERT)) {
+    throw new Error(`Certificate file ${process.env.CERTIFICATE_CERT} does not exist`);
+}
+if(!fs.existsSync(process.env.CERTIFICATE_KEY)) {
+    throw new Error(`Certificate file ${process.env.CERTIFICATE_KEY} does not exist`);
+}
+
+
+// Import required modules
 import express from "express";
 import https from "https";
 import mongoose from "mongoose";
-import fs from "fs";
-import authRoutes from "./routes/auth";
-import passkeyRoutes from "./routes/passkey";
-import siteRoutes from "./routes/site";
-import sitesRoutes from "./routes/sites";
-import pluginRoutes from "./routes/plugins";
-import siteAuthRoutes from "./routes/site-auth";
+import routes from "./routes";
 import cors from "cors";
+
 import User from "./models/user";
 import Site from "./models/site";
-import wpengineRoutes from "./routes/wpengine";
+
 import PluginManager from "./plugins/plugin-manager";
+
 mongoose.connect("mongodb://localhost:27017/test");
+
 const app = express();
 app.use(express.urlencoded());
 app.use(express.json());
 
-// set hostname
-const options = {
-    webserver: {
-        cors: [
-            "https://localhost:5173",
-            "https://home.mrdarrengriffin.com:2053",
-        ],
-        https: {
-            hostname: "localhost",
-            ssl: {
-                key: fs.readFileSync("key.pem"),
-                cert: fs.readFileSync("cert.pem"),
-            },
-        },
-    },
-};
-
 app.use(
     cors({
-        origin: options.webserver.cors,
+        origin: process.env.CORS_ALLOWED_ORIGINS.split(","),
         credentials: true,
     })
 );
 
 PluginManager.load();
 PluginManager.plugins.forEach((plugin) => {
-    app.use(`/plugins/${plugin.name.replace(" ", "-").toLowerCase()}`, plugin.getRoutes());
+    app.use(
+        `/plugins/${plugin.name.replace(" ", "-").toLowerCase()}`,
+        plugin.getRoutes()
+    );
 });
 
+app.use(routes);
 
+const server = https.createServer({
+    key: fs.readFileSync(process.env.CERTIFICATE_KEY),
+    cert: fs.readFileSync(process.env.CERTIFICATE_CERT),
+},app);
 
-app.use("/auth", authRoutes);
-app.use("/passkey", passkeyRoutes);
-app.use("/site-auth", siteAuthRoutes);
-app.use("/site", siteRoutes);
-app.use("/sites", sitesRoutes);
-app.use("/wpengine", wpengineRoutes);
-app.use("/plugins", pluginRoutes);
-
-const server = https.createServer(options.webserver.https.ssl, app);
-server.listen(8443, () => {
-    console.log("Server listening on port 8443");
+server.listen(process.env.SERVER_PORT, () => {
+    console.log(`Server listening on port ${process.env.SERVER_PORT}`);
 });
 
-if (true) {
-    let sites = Site.find().then(async (sites) => {
-        let user = await User.findOne({
-            username: "MrDarrenGriffin",
-        });
+async function sampleData() {
+    // Check if sample data is present in the env
+    if (!process.env.SAMPLE_USER || !process.env.SAMPLE_SITE) {
+        console.error("Not inserting sample data due to missing env vars");
+        return;
+    }
 
-        if (!user) {
-            user = new User({
-                username: "MrDarrenGriffin",
-            });
-        }
-
-        user.save();
-
-        sites.forEach((site) => {
-            site.user = user;
-            site.save();
-        });
-
-        let a = Site.findOne({
-            uri: "mrdarrengriffin.com",
-        }).then((site) => {
-            site.wpeInstallId = "";
-            site.save();
-        });
+    let user = await User.findOne({
+        username: process.env.SAMPLE_USER,
     });
+
+    if (!user) {
+        user = new User({
+            username: process.env.SAMPLE_USER,
+        });
+        user.save();
+    }
+
+    let site = await Site.findOne({
+        uri: process.env.SAMPLE_SITE,
+    });
+
+    if (!site) {
+        site = new Site({
+            uri: process.env.SAMPLE_SITE,
+            user,
+        });
+        site.save();
+    }
+
+    user.sites.push(site);
+    user.save();
 }
+
+sampleData();
