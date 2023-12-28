@@ -91,7 +91,7 @@ async function sampleData() {
         user = new User({
             username: process.env.SAMPLE_USER,
         });
-        user.save();
+        await user.save();
     }
 
     let site = await Site.findOne({
@@ -103,11 +103,11 @@ async function sampleData() {
             uri: process.env.SAMPLE_SITE,
             user,
         });
-        site.save();
+        await site.save();
     }
 
     user.sites.push(site);
-    user.save();
+    await user.save();
 }
 
 sampleData();
