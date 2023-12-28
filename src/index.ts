@@ -43,6 +43,7 @@ import User from "./models/user";
 import Site from "./models/site";
 
 import PluginManager from "./plugins/plugin-manager";
+import { WPEngineAuth, WPEngineSite } from "./models/wpengine";
 
 mongoose.connect("mongodb://localhost:27017/test");
 
@@ -108,6 +109,21 @@ async function sampleData() {
 
     user.sites.push(site);
     await user.save();
+
+    if(process.env.SAMPLE_WPENGINE_APIKEY) {
+        const wpeAuth = new WPEngineAuth({
+            user,
+            auth: process.env.SAMPLE_WPENGINE_APIKEY,
+        });
+        await wpeAuth.save();
+        user.wpengineAuth = wpeAuth;
+        await user.save();
+    }
+
+    if(process.env.SAMPLE_WPENGINE_INSTALL_ID) {
+        site.wpeInstallId = process.env.SAMPLE_WPENGINE_INSTALL_ID;
+        await site.save();
+    }
 }
 
 sampleData();
