@@ -52,11 +52,19 @@ const proxySite = async (req, res) => {
 
     // include ?a params
     await wpApi.request(req.method, proxyPath, req.query, req.body)
-    .then((response) => response.json())
+    .then((response) => {
+        if(response.ok){
+            return response.json();
+        }
+
+        res.status(response.status);
+        return response.json();
+    })
     .then((data) => {
         res.json(data);
         return;
     }).catch((error) => {
+        console.log(error);
         res.json({
             error: error.message,
         });
@@ -105,6 +113,7 @@ const proxyWPE = async (req, res) => {
                 return;
             }
         } catch (error) {
+            console.log(error);
             res.json({
                 error: error.message,
             });
@@ -115,6 +124,7 @@ const proxyWPE = async (req, res) => {
             res.json(responseJson);
             return;
         }
+
 
         res.json(responseJson);
     });

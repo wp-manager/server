@@ -67,10 +67,7 @@ const handleAuthCallback = async (req, res) => {
         user.save();
     }
 
-    res.json({
-        existing,
-        site_url
-    });
+    res.redirect(`https://wp-manager.co.uk/sites/${site_url}`);
 };
 
 export { authSite, handleAuthCallback };
