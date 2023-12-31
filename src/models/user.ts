@@ -2,7 +2,8 @@ import { Schema, model } from "mongoose"
 import { IUser } from "../interfaces/user";
 
 const userSchema = new Schema<IUser>({
-    username: String,
+    email: String,
+    password: String,
     sites: [{
         type: Schema.Types.ObjectId,
         ref: "Site",

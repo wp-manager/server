@@ -1,9 +1,6 @@
-import { WPEngineAuth, WPEngineSite } from "../models/wpengine";
-import { getUser } from "./auth";
+import { WPEngineAuth } from "../models/wpengine";
 
 const handleWPEngineCredentials = async (req, res) => {
-    let user = await getUser();
-
     if(!req.body.username || !req.body.password) {
         res.status(400).json({
             error: "Missing username and/or password",
@@ -13,7 +10,7 @@ const handleWPEngineCredentials = async (req, res) => {
 
 
     let wpeAuth = await WPEngineAuth.findOne({
-        user,
+        user: req.user,
     });
 
     if(wpeAuth) {
@@ -28,12 +25,12 @@ const handleWPEngineCredentials = async (req, res) => {
 
     
     wpeAuth = new WPEngineAuth({
-        user,
+        user: req.user,
         auth: btoa(`${req.body.username}:${req.body.password}`),
     });
     wpeAuth.save();
-    user.wpengineAuth = wpeAuth;
-    await user.save();
+    req.user.wpengineAuth = wpeAuth;
+    await req.user.save();
 
     res.json({
         success: true,

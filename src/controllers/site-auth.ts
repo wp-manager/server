@@ -4,8 +4,6 @@ import { getAuthdUser, getUser } from "./auth";
 import Site from "../models/site";
 
 const authSite = async (req: Request, res) => {
-    let user = await getUser();
-
     let uri = req.params.uri;
 
     // replace http://, https://, and www. with nothing. Also remove everything after the tld
@@ -30,8 +28,6 @@ const authSite = async (req: Request, res) => {
 };
 
 const handleAuthCallback = async (req, res) => {
-    let user = await getUser();
-
     const user_login = req.query.user_login;
 
     let site_url = req.query.site_url;
@@ -46,7 +42,7 @@ const handleAuthCallback = async (req, res) => {
     // Check if site already exists
     let site = await Site.findOne({
         uri: site_url,
-        user,
+        user: req.user,
     });
 
     let existing = false;
@@ -58,13 +54,13 @@ const handleAuthCallback = async (req, res) => {
     } else {
         site = new Site({
             uri: site_url,
-            user,
+            user: req.user,
             auth,
         });
         site.save();
 
-        user.sites.push(site);
-        user.save();
+        req.user.sites.push(site);
+        req.user.save();
     }
 
     res.redirect(`https://wp-manager.co.uk/sites/${site_url}`);

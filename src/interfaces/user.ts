@@ -2,7 +2,8 @@ import { ISiteAuth, IWPEngineAuth } from "./auth";
 import { ISite } from "./site";
 
 interface IUser {
-    username: string;
+    email: string;
+    password: string;
     sites: ISite[];
     wpengineAuth: IWPEngineAuth;
 }

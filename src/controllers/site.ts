@@ -1,20 +1,16 @@
-import User from "../models/user";
 import Site from "../models/site";
-import { getUser } from "./auth";
 import WordpressAPI from "../utils/wordpress";
 import WPEngineAPI from "../utils/wpengine";
 import { WPEngineAuth } from "../models/wpengine";
 
 const siteExists = async (req, res, next) => {
-    let user = await getUser();
-
     let uri = req.params.uri;
     // replace http://, https://, and www. with nothing. Also remove everything after the tld
     uri = uri.replace(/(https?:\/\/)?(www\.)?/g, "").split("/")[0];
 
     let site = await Site.findOne({
         uri,
-        user,
+        user: req.user,
     });
 
     if (!site) {
@@ -28,15 +24,13 @@ const siteExists = async (req, res, next) => {
 };
 
 const proxySite = async (req, res) => {
-    let user = await getUser();
-
     let uri = req.params.uri;
     // replace http://, https://, and www. with nothing. Also remove everything after the tld
     uri = uri.replace(/(https?:\/\/)?(www\.)?/g, "").split("/")[0];
 
     let site = await Site.findOne({
         uri,
-        user,
+        user: req.user,
     });
 
     if (!site) {
@@ -52,21 +46,18 @@ const proxySite = async (req, res) => {
 
     // include ?a params
     await wpApi.request(req.method, proxyPath, req.query, req.body)
-    .then((response) => {
-        if(response.ok){
-            return response.json();
+    .then(async (response) => {
+        if(!response.ok){
+            const body = await response.text();
+            return res.status(response.status).send(body);
         }
+        
+        const body = await response.json();
+        return res.status(response.status).json(body);
 
-        res.status(response.status);
-        return response.json();
-    })
-    .then((data) => {
-        res.json(data);
-        return;
     }).catch((error) => {
-        console.log(error);
-        res.json({
-            error: error.message,
+        res.status(500).json({
+            error: 'Failed to proxy request',
         });
         return;
     });
@@ -75,10 +66,8 @@ const proxySite = async (req, res) => {
 };
 
 const proxyWPE = async (req, res) => {
-    let user = await getUser();
-
     let auth = await WPEngineAuth.findOne({
-        user,
+        user: req.user,
     });
 
     if (!auth) {
@@ -113,8 +102,7 @@ const proxyWPE = async (req, res) => {
                 return;
             }
         } catch (error) {
-            console.log(error);
-            res.json({
+            res.status(response.status).json({
                 error: error.message,
             });
             return;

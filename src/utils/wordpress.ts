@@ -11,7 +11,7 @@ class WordpressAPI {
         this.auth = auth;
     }
 
-    async request(method: Method, path: string, params?: object, body?: any) {
+    async request(method: Method, path: string, params?: object, body?: any): Promise<Response> {
         const url = new URL(`https://${this.uri}/wp-json/${path}`);
 
         const headers = {

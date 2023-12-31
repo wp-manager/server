@@ -38,6 +38,7 @@ import https from "https";
 import mongoose from "mongoose";
 import routes from "./routes";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import User from "./models/user";
 import Site from "./models/site";
@@ -48,6 +49,7 @@ import { WPEngineAuth, WPEngineSite } from "./models/wpengine";
 mongoose.connect("mongodb://localhost:27017/test");
 
 const app = express();
+app.use(cookieParser());
 app.use(express.urlencoded());
 app.use(express.json());
 
