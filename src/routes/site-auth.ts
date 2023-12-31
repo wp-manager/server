@@ -5,7 +5,7 @@ import JWTUtils from "../utils/jwt";
 const router = express.Router();
 
 router.get("/callback", handleAuthCallback);
-router.get("/:uri", JWTUtils.authorisedUserMiddleware, authSite);
+router.get("/:uri", authSite);
 
 router.post('/wpengine', JWTUtils.authorisedUserMiddleware, handleWPEngineCredentials);
 
