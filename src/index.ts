@@ -6,6 +6,7 @@ const envDefaults = {
     CORS_ALLOWED_ORIGINS: "https://localhost:5173",
     CERTIFICATE_CERT: "certs/cert.pem",
     CERTIFICATE_KEY: "certs/key.pem",
+    SERVER_URL: false
 };
 
 // Set environment variables to defaults if they are not already set

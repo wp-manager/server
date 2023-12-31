@@ -20,12 +20,12 @@ const authSite = async (req: Request, res) => {
     url.searchParams.append("app_id", "6708b25c-f31a-4a99-8dc5-68d575514c08");
     url.searchParams.append(
         "success_url",
-        `${req.protocol}://${req.hostname}${port}/site-auth/callback?token=${req.cookies.token}`
+        `${process.env.SERVER_URL}/site-auth/callback?token=${req.cookies.token}`
     );
 
     url.searchParams.append(
         "reject_url",
-        `${req.protocol}://${req.hostname}/site-auth/callback`
+        `${process.env.SERVER_URL}/site-auth/callback`
     );
 
     const destination = url.toString();
