@@ -85,7 +85,10 @@ const login = async (req, res) => {
     res.cookie("token", token, {
         httpOnly: true,
         secure: true,
-    }).sendStatus(200);
+    }).status(200).json({
+        id: user.id,
+        email: user.email,
+    });
 
 }
 
