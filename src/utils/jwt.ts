@@ -15,6 +15,7 @@ class JWTUtils{
             jwt.verify(token, accessTokenSecret);
             return true;
         }catch(e){
+            console.log(e);
             return false;
         }
     }
@@ -22,24 +23,32 @@ class JWTUtils{
     static async authorisedUserMiddleware(req, res, next){
         const token = req.cookies.token;
         
-        if(!JWTUtils.verifyAccessToken(token)){
-            return res.status(401).json({
-                error: "Invalid token",
+        const authorisedTokenUser = await JWTUtils.authorisedUser(token);
+        if(!authorisedTokenUser){
+            res.status(401).json({
+                message: "Not authorised",
             });
+            return;
         }
 
-        const decoded = jwt.decode(token) as any;
+        req.user = authorisedTokenUser;
 
+        next();
+    }
+
+    static async authorisedUser(token){
+        if(!JWTUtils.verifyAccessToken(token)){
+            return false;
+        }
+        
+        const decoded = jwt.decode(token) as any;
+        
         if(!decoded){
-            return res.status(401).json({
-                error: "Invalid token",
-            });
+            return false;
         }
         
         if(!decoded.email){
-            return res.status(401).json({
-                error: "Invalid user",
-            });
+            return false;
         }
 
         const user = await User.findOne({
@@ -47,14 +56,10 @@ class JWTUtils{
         });
 
         if(!user){
-            return res.status(401).json({
-                error: "Invalid user",
-            });
+            return false;
         }
 
-        req.user = user;
-
-        next();
+        return user;
     }
 }
 
