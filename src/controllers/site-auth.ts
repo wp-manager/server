@@ -1,6 +1,6 @@
 import { Request, Router } from "express";
 import User from "../models/user";
-import { getAuthdUser, getUser } from "./auth";
+import { getAuthdUser } from "./auth";
 import Site from "../models/site";
 
 const authSite = async (req: Request, res) => {
