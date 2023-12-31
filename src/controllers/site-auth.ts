@@ -29,11 +29,8 @@ const authSite = async (req: Request, res) => {
     );
 
     const destination = url.toString();
-
-    res.json({
-        destination,
-    });
-    //res.redirect(destination);
+    
+    res.redirect(destination);
 };
 
 const handleAuthCallback = async (req, res) => {
@@ -71,17 +68,17 @@ const handleAuthCallback = async (req, res) => {
     // If the site exists, update the auth
     if (site) {
         site.auth = auth;
-        site.save();
+        await site.save();
     } else {
         site = new Site({
             uri: site_url,
             user,
             auth,
         });
-        site.save();
+        await site.save();
 
-        req.user.sites.push(site);
-        req.user.save();
+        user.sites.push(site);
+        await user.save();
     }
 
     res.redirect(`${process.env.CLIENT_URL}/sites/${site_url}`);
