@@ -1,6 +1,4 @@
-import { Request, Router } from "express";
-import User from "../models/user";
-import { getAuthdUser } from "./auth";
+import { Request } from "express";
 import Site from "../models/site";
 import JWTUtils from "../utils/jwt";
 
