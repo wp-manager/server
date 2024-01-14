@@ -82,7 +82,7 @@ class PagespeedWorker {
     }
 
     async performPagespeed(site, strategy: "MOBILE" | "DESKTOP" = "MOBILE") {
-        const url = `https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed?url=${site.uri}&category=PERFORMANCE&category=ACCESSIBILITY&category=BEST_PRACTICES&category=SEO&strategy=${strategy}&key=${process.env.GOOGLE_API_KEY}`;
+        const url = `https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://${site.uri}&category=PERFORMANCE&category=ACCESSIBILITY&category=BEST_PRACTICES&category=SEO&strategy=${strategy}&key=${process.env.GOOGLE_API_KEY}`;
         const data = await fetch(url).then((res) => res.json()) as any;
 
         if (!data.lighthouseResult || !data.lighthouseResult.categories) {
