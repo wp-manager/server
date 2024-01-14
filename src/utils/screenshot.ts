@@ -4,7 +4,7 @@ import Site from "../models/site";
 class ScreenshotWorker {
     inProgress = [];
     currentSite = null;
-    maxConcurrency = process.env.MAX_PARALLEL_SCREENSHOTS || 2;
+    maxConcurrency = parseInt(process.env.MAX_PARALLEL_SCREENSHOTS) || 2;
 
     async start() {
         this.doJob();
