@@ -1,9 +1,9 @@
 interface ISite {
     uri: string;
     mobileScreenshot: string;
-    mobileScreenshotExpires: Date;
     desktopScreenshot: string;
-    desktopScreenshotExpires: Date;
+    screenshotExpires: Date;
+    skipScreenshot: boolean;
 }
 
 export { ISite }

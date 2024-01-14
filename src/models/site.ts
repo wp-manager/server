@@ -4,9 +4,9 @@ import { ISite } from "../interfaces/site";
 const siteSchema = new Schema<ISite>({
     uri: String,
     mobileScreenshot: String,
-    mobileScreenshotExpires: Date,
     desktopScreenshot: String,
-    desktopScreenshotExpires: Date,
+    screenshotExpires: Date,
+    skipScreenshot: Boolean,
 });
 
 const Site = model<ISite>("Site", siteSchema);
