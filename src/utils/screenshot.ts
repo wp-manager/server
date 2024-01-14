@@ -44,7 +44,7 @@ class ScreenshotWorker {
                 },
                 {
                     screenshotExpires: {
-                        $lt: Date.now(),
+                        $lt: new Date(Date.now()),
                     },
                 },
             ],
@@ -78,8 +78,7 @@ class ScreenshotWorker {
             await this.captureScreenshots(site);
             console.log(`[${site.uri}] Captured screenshots`);
 
-            site.screenshotExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-            await site.save();
+           
         }
 
         site = null;
@@ -158,15 +157,17 @@ class ScreenshotWorker {
             await browser.close();
 
             site.mobileScreenshot = mobileScreenshot;
-            site.screenshotExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+            // Expire in 24 hours
+            site.screenshotExpires = new Date(Date.now() + (1000 * 60 * 60 * 24));
             await site.save();
         } catch (e) {
             await browser.close();
             console.log(
                 `[${site.uri}] Failed to capture screenshots. Will retry in 30 minutes`
             );
-            site.screenshotExpires = new Date(Date.now() + 30 * 60 * 1000);
+            // Expire in 30 minutes
+            site.screenshotExpires = new Date(Date.now() + (60 * 30 * 1000));
             await site.save();
         }
     }
