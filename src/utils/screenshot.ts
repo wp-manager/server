@@ -14,7 +14,7 @@ class ScreenshotWorker {
     }
 
     async doJob() {
-        if (this.inProgress.length > 2) {
+        if (this.inProgress.length > this.maxConcurrency) {
             return;
         }
 
