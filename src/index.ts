@@ -7,6 +7,7 @@ const envDefaults = {
     CERTIFICATE_CERT: "certs/cert.pem",
     CERTIFICATE_KEY: "certs/key.pem",
     SERVER_URL: false,
+    MAX_PARALLEL_SCREENSHOTS: 2
 };
 
 // Set environment variables to defaults if they are not already set
