@@ -88,7 +88,7 @@ const handleAuthCallback = async (req, res) => {
         await siteAuth.save();
     }
 
-    res.redirect(`${process.env.CLIENT_URL}/sites/${site_url}`);
+    res.redirect(`${process.env.CLIENT_URL}/site/${site_url}`);
     return;
 };
 
