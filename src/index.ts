@@ -45,11 +45,10 @@ import mongoose from "mongoose";
 import routes from "./routes";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import ScreenshotWorker from "./utils/screenshot";
 
 import PluginManager from "./plugins/plugin-manager";
 import http2Express from "http2-express-bridge";
-
-mongoose.connect("mongodb://localhost:27017/test");
 
 const app = http2Express(express);
 app.use(cookieParser());
@@ -81,7 +80,18 @@ const server = http2.createSecureServer(
     },
     app
 );
+mongoose.connect("mongodb://localhost:27017/test").then(() => {
+    // check if connection successful
+    if (!mongoose.connection.readyState) {
+        throw new Error("Failed to connect to MongoDB");
+    }
+    console.log("Connected to MongoDB");
 
-server.listen(process.env.SERVER_PORT, () => {
-    console.log(`Server listening on port ${process.env.SERVER_PORT}`);
+    // Start screenshotting
+    const sw = new ScreenshotWorker();
+    sw.start();
+    
+    server.listen(process.env.SERVER_PORT, () => {
+        console.log(`Server listening on port ${process.env.SERVER_PORT}`);
+    });
 });
