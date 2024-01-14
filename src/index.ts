@@ -47,6 +47,7 @@ import routes from "./routes";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import ScreenshotWorker from "./utils/screenshot";
+import PagespeedWorker from "./utils/pagespeed";
 
 import PluginManager from "./plugins/plugin-manager";
 import http2Express from "http2-express-bridge";
@@ -91,6 +92,10 @@ mongoose.connect("mongodb://localhost:27017/test").then(() => {
     // Start screenshotting
     const sw = new ScreenshotWorker();
     sw.start();
+
+    // Start PageSpeed
+    const pw = new PagespeedWorker();
+    pw.start();
     
     server.listen(process.env.SERVER_PORT, () => {
         console.log(`Server listening on port ${process.env.SERVER_PORT}`);

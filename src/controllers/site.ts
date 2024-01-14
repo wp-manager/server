@@ -89,9 +89,9 @@ const screenshotDesktop = async (req, res) => {
         });
         return;
     }
-    
+
     req.setTimeout(5000);
-    
+
     if (req.site.desktopScreenshot) {
         // Use existing screenshot
         res.set("Content-Type", "image/webp");
@@ -130,4 +130,45 @@ const screenshotMobile = async (req, res) => {
     return;
 };
 
-export { proxySite, siteExists, screenshotDesktop, screenshotMobile };
+const pagespeed = async (req, res) => {
+    if (!req.site || !req.site.uri) {
+        res.status(400).json({
+            error: "Unable to load site",
+        });
+        return;
+    }
+
+    if (req.site.pagespeed) {
+        res.json({
+            desktop: {
+                performance: req.site.pagespeed.desktop.performance,
+                accessibility: req.site.pagespeed.desktop.accessibility,
+                bestPractices: req.site.pagespeed.desktop.bestPractices,
+                seo: req.site.pagespeed.desktop.seo,
+            },
+            mobile: {
+                performance: req.site.pagespeed.mobile.performance,
+                accessibility: req.site.pagespeed.mobile.accessibility,
+                bestPractices: req.site.pagespeed.mobile.bestPractices,
+                seo: req.site.pagespeed.mobile.seo,
+            },
+            expires: req.site.pagespeed.expires,
+        });
+
+        return;
+    } else {
+        res.status(400).json({
+            error: "No PageSpeed available",
+        });
+    }
+
+    return;
+};
+
+export {
+    proxySite,
+    siteExists,
+    screenshotDesktop,
+    screenshotMobile,
+    pagespeed,
+};

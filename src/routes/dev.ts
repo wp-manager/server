@@ -17,5 +17,17 @@ router.get("/delete-screenshots", async (req, res) => {
     });
 });
 
+router.get("/delete-pagespeeds", async (req, res) => {
+    const sites = await Site.find({});
+    for (const site of sites) {
+        site.pagespeed = null;
+        site.pagespeed.expires = new Date(Date.now() - 3600000);
+        await site.save();
+    }
+    res.json({
+        success: true,
+    });
+});
+
 export default router;
 

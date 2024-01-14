@@ -7,6 +7,21 @@ const siteSchema = new Schema<ISite>({
     desktopScreenshot: String,
     screenshotExpires: Date,
     skipScreenshot: Boolean,
+    pagespeed: {
+        expires: Date,
+        mobile: {
+            performance: Number,
+            accessibility: Number,
+            bestPractices: Number,
+            seo: Number,
+        },
+        desktop: {
+            performance: Number,
+            accessibility: Number,
+            bestPractices: Number,
+            seo: Number,
+        }
+    }
 });
 
 const Site = model<ISite>("Site", siteSchema);

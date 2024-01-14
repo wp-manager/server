@@ -77,8 +77,6 @@ class ScreenshotWorker {
             console.log(`[${site.uri}] Capturing screenshots`);
             await this.captureScreenshots(site);
             console.log(`[${site.uri}] Captured screenshots`);
-
-           
         }
 
         site = null;
