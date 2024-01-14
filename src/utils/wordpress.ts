@@ -21,7 +21,7 @@ class WordpressAPI {
 
         const requestOptions = {
             method,
-            headers,
+            headers
         };
 
         if (body) {
@@ -39,7 +39,7 @@ class WordpressAPI {
             url: url.toString(),
             requestOptions,
         };
-        
+
         return fetch(url.toString(), requestOptions);
        
     }

@@ -1,5 +1,4 @@
 import express from "express";
-import fs from "fs";
 import PluginManager from "../plugins/plugin-manager";
 const router = express.Router();
 

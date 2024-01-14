@@ -3,12 +3,10 @@ import { ISite } from "../interfaces/site";
 
 const siteSchema = new Schema<ISite>({
     uri: String,
-    user: {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-    },
-    auth: String,
-    wpeInstallId: String,
+    mobileScreenshot: String,
+    mobileScreenshotExpires: Date,
+    desktopScreenshot: String,
+    desktopScreenshotExpires: Date,
 });
 
 const Site = model<ISite>("Site", siteSchema);

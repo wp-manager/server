@@ -7,11 +7,7 @@ const userSchema = new Schema<IUser>({
     sites: [{
         type: Schema.Types.ObjectId,
         ref: "Site",
-    }],
-    wpengineAuth: {
-        type: Schema.Types.ObjectId,
-        ref: "WPEngineAuth",
-    },
+    }]
 });
 
 const User = model<IUser>("User", userSchema);

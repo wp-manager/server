@@ -5,7 +5,7 @@ class JWTUtils{
     
     static generateAccessToken(email: string){
         const accessTokenSecret = process.env.JWT_SECRET;
-        const accessToken = jwt.sign({ email }, accessTokenSecret, { expiresIn: '1h' });
+        const accessToken = jwt.sign({ email }, accessTokenSecret, { expiresIn: '12h' });
         return accessToken;
     }
 
@@ -22,6 +22,13 @@ class JWTUtils{
 
     static async authorisedUserMiddleware(req, res, next){
         const token = req.cookies.token;
+
+        if(!token){
+            res.status(401).json({
+                message: "Not authorised",
+            });
+            return;
+        }
         
         const authorisedTokenUser = await JWTUtils.authorisedUser(token);
         if(!authorisedTokenUser){

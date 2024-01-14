@@ -1,12 +1,21 @@
+import SiteAuth from "../models/site-auth";
 import User from "../models/user";
 import JWTUtils from "../utils/jwt";
 import UserUtils from "../utils/user";
 
-const getAuthdUser = async (req, res) => {
-    // only include id and username
+const getAccount = async (req, res) => {
+
+    const authdSites = await SiteAuth.find({
+        user: req.user,
+    }).populate("site");
+
+    let siteUrls = authdSites.map((siteAuth) => {
+        return siteAuth.site.uri.replace("https://", "").replace("http://", "");
+    });
+
     res.json({
-        id: req.user.id,
         email: req.user.email,
+        sites: siteUrls
     });
 }
 
@@ -49,7 +58,6 @@ const register = async (req, res) => {
     await user.save();
 
     res.json({
-        id: user.id,
         email: user.email,
     });
 }
@@ -102,7 +110,7 @@ const logout = async (req, res) => {
 };
 
 export {
-    getAuthdUser,
+    getAccount,
     emailAvailability,
     register,
     login,
