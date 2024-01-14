@@ -96,8 +96,8 @@ class ScreenshotWorker {
 
             // Set viewport
             await page.setViewport({
-                width: 1920,
-                height: 1080,
+                width: 1200,
+                height: 720,
             });
 
             // Some sites don't load assets until an interaction is made by the user
@@ -126,8 +126,9 @@ class ScreenshotWorker {
             // Take screenshot
             const desktopScreenshot = await page.screenshot({
                 type: "webp",
-                quality: 80,
+                quality: 50,
                 encoding: "base64",
+                optimizeForSpeed: true,
             });
 
             site.desktopScreenshot = desktopScreenshot;
@@ -151,6 +152,7 @@ class ScreenshotWorker {
                 type: "webp",
                 quality: 80,
                 encoding: "base64",
+                optimizeForSpeed: true,
             });
 
             // Close browser
