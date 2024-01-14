@@ -13,6 +13,9 @@ const getAccount = async (req, res) => {
         return siteAuth.site.uri.replace("https://", "").replace("http://", "");
     });
 
+    // sort alphabetically
+    siteUrls.sort();
+
     res.json({
         email: req.user.email,
         sites: siteUrls
