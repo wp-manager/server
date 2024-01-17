@@ -67,13 +67,36 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     const { email, password } = req.body;
+    
+    if(!email){
+        res.status(401).json({
+            message: "Please enter an email",
+        });
+        return;
+    }
+
+    // Check if email is a valid email using regex
+    const emailRegex = /\S+@\S+\.\S+/;
+    if(!emailRegex.test(email)){
+        res.status(401).json({
+            message: "Please enter a valid email",
+        });
+        return;
+    }
+
+    if(!password){
+        res.status(401).json({
+            message: "Please enter a password",
+        });
+        return;
+    }
 
     // Check if email is valid
     const available = await UserUtils.isEmailAvailable(email);
 
     if(available){
         res.status(401).json({
-            message: "Email is invalid",
+            message: "No account exists with that email",
         });
         return;
     }
@@ -86,7 +109,7 @@ const login = async (req, res) => {
 
     if(!passwordValid){
         res.status(401).json({
-            message: "Password is invalid",
+            message: "Incorrect password",
         });
         return;
     }
