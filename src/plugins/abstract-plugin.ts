@@ -1,14 +1,13 @@
 import express from "express";
 const router = express.Router();
 
-class AbstractPlugin {
+abstract class AbstractPlugin {
     public name: string;
     public version: string;
     public author: string;
 
-    getRoutes(): any {
-        return router;
-    }
+    abstract install(): void;
+    abstract routes(router: express.Router): express.Router;
 
 }
 

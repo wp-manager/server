@@ -65,14 +65,9 @@ app.use(
 );
 
 PluginManager.load();
-PluginManager.plugins.forEach((plugin) => {
-    app.use(
-        `/plugins/${plugin.name.replace(" ", "-").toLowerCase()}`,
-        plugin.getRoutes()
-    );
-});
 
 app.use(routes);
+app.use(PluginManager.getRoutes());
 
 const server = http2.createSecureServer(
     {
