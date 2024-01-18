@@ -42,6 +42,29 @@ const emailAvailability = async (req, res) => {
 const register = async (req, res) => {
     const { email, password } = req.body;
 
+    if(!email){
+        res.status(401).json({
+            message: "Please enter an email",
+        });
+        return;
+    }
+
+    // Check if email is a valid email using regex
+    const emailRegex = /\S+@\S+\.\S+/;
+    if(!emailRegex.test(email)){
+        res.status(401).json({
+            message: "Please enter a valid email",
+        });
+        return;
+    }
+
+    if(!password){
+        res.status(401).json({
+            message: "Please enter a password",
+        });
+        return;
+    }
+
     // Check if email is taken
     const available = await UserUtils.isEmailAvailable(email);
 
