@@ -116,8 +116,8 @@ class PagespeedWorker {
         } else if (strategy === "DESKTOP") {
             site.pagespeed.desktop = results;
         }
-        // Expire in 1 hour
-        site.pagespeed.expires = new Date(Date.now() + 60 * 60 * 1000);
+        // Expire in 24 hours
+        site.pagespeed.expires = new Date(Date.now() + (24 * (60 * 60 * 1000)));
         await site.save();
 
         console.log(`[${site.uri}] Results ${JSON.stringify(results)}`);
