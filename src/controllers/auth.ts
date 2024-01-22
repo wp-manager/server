@@ -1,5 +1,6 @@
 import SiteAuth from "../models/site-auth";
 import User from "../models/user";
+import WPEngineAuth from "../plugins/wp-engine-proxy/models/wp-engine-auth";
 import JWTUtils from "../utils/jwt";
 import UserUtils from "../utils/user";
 
@@ -16,9 +17,17 @@ const getAccount = async (req, res) => {
     // sort alphabetically
     siteUrls.sort();
 
+    // Get WPE Auths
+    const wpeAuth = await WPEngineAuth.findOne({
+        user: req.user,
+    });
+
+
+
     res.json({
         email: req.user.email,
-        sites: siteUrls
+        sites: siteUrls,
+        wpe: !!wpeAuth
     });
 }
 

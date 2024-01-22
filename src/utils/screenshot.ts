@@ -6,6 +6,10 @@ class ScreenshotWorker {
     currentSite = null;
     maxConcurrency = parseInt(process.env.MAX_PARALLEL_SCREENSHOTS) || 2;
 
+    retryExpire = 30 * 60 * 1000; // 1 hour
+    successExpire = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+
     async start() {
         this.doJob();
         setInterval(() => {
@@ -158,16 +162,16 @@ class ScreenshotWorker {
 
             site.mobileScreenshot = mobileScreenshot;
 
-            // Expire in 24 hours
-            site.screenshotExpires = new Date(Date.now() + (1000 * 60 * 60 * 24));
+            // Expire in 7 days
+            site.screenshotExpires = new Date(Date.now() + this.successExpire);
             await site.save();
         } catch (e) {
             await browser.close();
             console.log(
                 `[${site.uri}] Failed to capture screenshots. Will retry in 30 minutes`
             );
-            // Expire in 30 minutes
-            site.screenshotExpires = new Date(Date.now() + (60 * 30 * 1000));
+            // Expire in 1 hour
+            site.screenshotExpires = new Date(Date.now() + this.retryExpire);
             await site.save();
         }
     }

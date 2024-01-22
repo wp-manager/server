@@ -11,6 +11,6 @@ router.post("/auth", JWTUtils.authorisedUserMiddleware, updateToken);
 router.delete("/auth", JWTUtils.authorisedUserMiddleware, deleteToken);
 
 // Proxy routes
-router.all('/proxy/*', proxy);
+router.all('/api/*', JWTUtils.authorisedUserMiddleware, proxy);
 
 export default router;

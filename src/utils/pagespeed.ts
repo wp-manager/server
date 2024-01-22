@@ -5,6 +5,9 @@ class PagespeedWorker {
     inProgress = [];
     maxConcurrency = parseInt(process.env.MAX_PARALLEL_PAGESPEEDS) || 2;
 
+    retryExpire = 30 * 60 * 1000; // 1 hour
+    successExpire = 7 * 24 * 60 * 60 * 1000; // 1 day
+
     async start() {
         this.doJob();
         setInterval(() => {
@@ -73,9 +76,9 @@ class PagespeedWorker {
                 console.log(`[${site.uri}] PageSpeed complete`);
             } catch (e) {
                 console.log(
-                    `[${site.uri}] Failed to run PageSpeed. Will try again in 30 minutes`
+                    `[${site.uri}] Failed to run PageSpeed. Will try again in 1 hour`
                 );
-                site.pagespeed.expires = new Date(Date.now() + 30 * 60 * 1000);
+                site.pagespeed.expires = new Date(Date.now() + this.retryExpire);
                 await site.save();
             }
         }
@@ -117,7 +120,7 @@ class PagespeedWorker {
             site.pagespeed.desktop = results;
         }
         // Expire in 24 hours
-        site.pagespeed.expires = new Date(Date.now() + (24 * (60 * 60 * 1000)));
+        site.pagespeed.expires = new Date(Date.now() + this.successExpire);
         await site.save();
 
         console.log(`[${site.uri}] Results ${JSON.stringify(results)}`);
