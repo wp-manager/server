@@ -50,5 +50,34 @@ router.post("/uninstall-plugin", JWTUtils.authorisedUserMiddleware, async (req: 
     });
 });
 
-export default router;
+router.get('/plugin/:cdnurl', async (req: any, res) => {
+    const { cdnurl } = req.params;
 
+    // decode the url if it's encoded
+    const decoded = decodeURIComponent(cdnurl);
+
+    // if token is in the decoded url, then it's a private plugin  
+    // Take the token out of the url, and use it as a bearer token
+    const url = new URL(decoded);
+    const token = url.searchParams.get('token');
+
+    if(token) {
+        const response = await fetch(decoded, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if(!response.ok) {
+            return res.status(404).json({
+                error: "Plugin not found",
+            });
+        }
+
+        res.setHeader('Content-Type', 'application/javascript');
+        res.send(await response.text());
+        return;
+    }
+});
+
+export default router;
