@@ -27,6 +27,9 @@ const getAccount = async (req, res) => {
     res.json({
         email: req.user.email,
         sites: siteUrls,
+        plugins: req.user.plugins.map((plugin) => {
+            return plugin.path;
+        }),
         wpe: !!wpeAuth
     });
 }

@@ -7,7 +7,10 @@ const userSchema = new Schema<IUser>({
     sites: [{
         type: Schema.Types.ObjectId,
         ref: "Site",
-    }]
+    }],
+    plugins: [{
+        path: String,
+    }],
 });
 
 const User = model<IUser>("User", userSchema);
