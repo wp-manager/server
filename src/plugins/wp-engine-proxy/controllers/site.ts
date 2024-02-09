@@ -70,7 +70,7 @@ const assignedSite = async (req, res) => {
 
     if(!uri) {
         res.status(400).json({
-            error: "Missing required fields",
+            error: "No uri provided",
         });
         return;
     }
@@ -93,7 +93,7 @@ const assignedSite = async (req, res) => {
 
     if(!wpEngineUserSite) {
         res.status(404).json({
-            error: "Site not found",
+            error: "This site is not assigned to a WP Engine install"
         });
         return;
     }
