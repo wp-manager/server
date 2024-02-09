@@ -18,8 +18,6 @@ const proxy = async (req, res) => {
     
     let wpeApi = new WPEngineAPI(auth.auth);
 
-    console.log(auth);
-
     // include ?a params
     await wpeApi
         .request(req.method, proxyPath, req.query, req.body)
@@ -28,11 +26,16 @@ const proxy = async (req, res) => {
                 const body = await response.text();
                 return res.status(response.status).send(body);
             }
-
-            const body = await response.json();
-            return res.status(response.status).json(body);
+            
+            try {
+                const body = await response.json();
+                return res.status(response.status).json(body);
+            } catch (e) {
+                return res.status(response.status).send();
+            }
         })
         .catch((error) => {
+            console.error("Failed to proxy request", error);
             res.status(500).json({
                 error: "Failed to proxy request",
             });
