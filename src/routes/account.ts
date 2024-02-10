@@ -92,21 +92,21 @@ router.get("/plugin/:cdnurl", async (req: any, res) => {
         };
     }
 
-    const response = await fetch(decoded, params).catch((e) => {
+    fetch(decoded, params).then(async (response) => {
+        if (!response.ok) {
+            return res.status(404).json({
+                error: "Plugin not found",
+            });
+        }
+
+        res.setHeader("Content-Type", "application/javascript");
+        res.send(await response.text());
+        return;
+    }).catch((e) => {
         return res.status(404).json({
             error: "Plugin not found",
         });
     });
-
-    if (!response.ok) {
-        return res.status(404).json({
-            error: "Plugin not found",
-        });
-    }
-
-    res.setHeader("Content-Type", "application/javascript");
-    res.send(await response.text());
-    return;
 });
 
 export default router;
