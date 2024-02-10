@@ -72,7 +72,14 @@ router.get("/plugin/:cdnurl", async (req: any, res) => {
 
     // if token is in the decoded url, then it's a private plugin
     // Take the token out of the url, and use it as a bearer token
-    const url = new URL(decoded);
+    let url;
+    try {
+        url = new URL(decoded);
+    } catch (e) {
+        return res.status(400).json({
+            error: "Invalid URL",
+        });
+    }
     const token = url.searchParams.get("token");
 
     let params = {
@@ -85,7 +92,11 @@ router.get("/plugin/:cdnurl", async (req: any, res) => {
         };
     }
 
-    const response = await fetch(decoded, params);
+    const response = await fetch(decoded, params).catch((e) => {
+        return res.status(404).json({
+            error: "Plugin not found",
+        });
+    });
 
     if (!response.ok) {
         return res.status(404).json({
