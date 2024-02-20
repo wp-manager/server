@@ -51,6 +51,7 @@ import PagespeedWorker from "./utils/pagespeed";
 
 import PluginManager from "./plugins/plugin-manager";
 import http2Express from "http2-express-bridge";
+import CrawleeWorker from "./utils/crawlee";
 
 const app = http2Express(express);
 app.use(cookieParser());
@@ -91,6 +92,10 @@ mongoose.connect("mongodb://localhost:27017/test").then(() => {
     // Start PageSpeed
     const pw = new PagespeedWorker();
     pw.start();
+
+    // Start crawling
+    const cw = new CrawleeWorker();
+    cw.start();
     
     server.listen(process.env.SERVER_PORT, () => {
         console.log(`Server listening on port ${process.env.SERVER_PORT}`);

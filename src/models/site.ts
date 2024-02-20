@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose"
+import { Schema, model } from "mongoose";
 import { ISite } from "../interfaces/site";
 
 const siteSchema = new Schema<ISite>({
@@ -20,8 +20,22 @@ const siteSchema = new Schema<ISite>({
             accessibility: Number,
             bestPractices: Number,
             seo: Number,
-        }
-    }
+        },
+    },
+    crawl: {
+        expires: Date,
+        stats: {
+            totalUrls: Number,
+            responseCodeTotals: [{ code: Number, count: Number }],
+        },
+        results: [
+            {
+                url: String,
+                redirectDestination: String,
+                response: Number,
+            },
+        ],
+    },
 });
 
 const Site = model<ISite>("Site", siteSchema);

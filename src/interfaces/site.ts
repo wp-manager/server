@@ -18,6 +18,20 @@ interface ISite {
             bestPractices: number;
             seo: number;
         }
+    },
+    crawl: {
+        expires: Date;
+        stats?: {
+            totalUrls: number;
+            responseCodeTotals: [{ code: number, count: number }];
+        },
+        results?: [
+            {
+                url: string;
+                redirectDestination: string;
+                response: number;
+            }
+        ]
     }
 }
 
