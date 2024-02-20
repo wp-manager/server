@@ -46,6 +46,8 @@ class ScreenshotWorker {
                 {
                     screenshotExpires: null,
                 },
+            ],
+            $and: [
                 {
                     screenshotExpires: {
                         $lt: new Date(Date.now()),
@@ -80,7 +82,7 @@ class ScreenshotWorker {
         ) {
             console.log(`[${site.uri}] Capturing screenshots`);
             await this.captureScreenshots(site);
-            console.log(`[${site.uri}] Captured screenshots`);
+            console.log(`[${site.uri}] Completed screenshots`);
         }
 
         site = null;
@@ -170,7 +172,7 @@ class ScreenshotWorker {
             console.log(
                 `[${site.uri}] Failed to capture screenshots. Will retry in 30 minutes`
             );
-            // Expire in 1 hour
+            // Expire in 30 mins
             site.screenshotExpires = new Date(Date.now() + this.retryExpire);
             await site.save();
         }
