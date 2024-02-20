@@ -51,7 +51,7 @@ import PagespeedWorker from "./utils/pagespeed";
 
 import PluginManager from "./plugins/plugin-manager";
 import http2Express from "http2-express-bridge";
-import CrawleeWorker from "./utils/crawlee";
+import CrawlerWorker from "./utils/crawler";
 
 const app = http2Express(express);
 app.use(cookieParser());
@@ -94,7 +94,7 @@ mongoose.connect("mongodb://localhost:27017/test").then(() => {
     pw.start();
 
     // Start crawling
-    const cw = new CrawleeWorker();
+    const cw = new CrawlerWorker();
     cw.start();
     
     server.listen(process.env.SERVER_PORT, () => {

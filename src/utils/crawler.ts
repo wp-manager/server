@@ -31,7 +31,7 @@ enum CrawlStrategy {
 
 
 
-class CrawleeWorker {
+class CrawlerWorker {
     private crawls: Crawl[] = []; 
     private maxSiteConcurrency = 1;
     private maxCrawlConcurrency = 10;
@@ -359,4 +359,4 @@ class CrawleeWorker {
     }
 }
 
-export default CrawleeWorker;
+export default CrawlerWorker;
