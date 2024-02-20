@@ -7,7 +7,7 @@ const envDefaults = {
     CERTIFICATE_CERT: "certs/cert.pem",
     CERTIFICATE_KEY: "certs/key.pem",
     SERVER_URL: false,
-    MAX_PARALLEL_SCREENSHOTS: 2
+    MAX_PARALLEL_SCREENSHOTS: 2,
 };
 
 // Set environment variables to defaults if they are not already set
@@ -52,6 +52,7 @@ import PagespeedWorker from "./utils/pagespeed";
 import PluginManager from "./plugins/plugin-manager";
 import http2Express from "http2-express-bridge";
 import CrawlerWorker from "./utils/crawler";
+import Stats from "./utils/stats";
 
 const app = http2Express(express);
 app.use(cookieParser());
@@ -85,6 +86,13 @@ mongoose.connect("mongodb://localhost:27017/test").then(() => {
     }
     console.log("Connected to MongoDB");
 
+    setInterval(() => {
+        console.clear();
+        Stats.getAll().forEach((stat) => {
+            console.log(`[${stat.group}] ${stat.label}: ${stat.value}`)
+        });
+    }, 10);
+
     // Start screenshotting
     const sw = new ScreenshotWorker();
     sw.start();
@@ -96,7 +104,7 @@ mongoose.connect("mongodb://localhost:27017/test").then(() => {
     // Start crawling
     const cw = new CrawlerWorker();
     cw.start();
-    
+
     server.listen(process.env.SERVER_PORT, () => {
         console.log(`Server listening on port ${process.env.SERVER_PORT}`);
     });

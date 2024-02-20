@@ -23,7 +23,7 @@ interface ISite {
         expires: Date;
         stats?: {
             totalUrls: number;
-            responseCodeTotals: [{ code: number, count: number }];
+            responseCodeTotals: { code: number, count: number }[];
         },
         results?: [
             {
