@@ -85,14 +85,7 @@ mongoose.connect("mongodb://localhost:27017/test").then(() => {
         throw new Error("Failed to connect to MongoDB");
     }
     console.log("Connected to MongoDB");
-
-    setInterval(() => {
-        console.clear();
-        Stats.getAll().forEach((stat) => {
-            console.log(`[${stat.group}] ${stat.label}: ${stat.value}`)
-        });
-    }, 10);
-
+    
     // Start screenshotting
     const sw = new ScreenshotWorker();
     sw.start();
@@ -108,4 +101,6 @@ mongoose.connect("mongodb://localhost:27017/test").then(() => {
     server.listen(process.env.SERVER_PORT, () => {
         console.log(`Server listening on port ${process.env.SERVER_PORT}`);
     });
+}).catch((err) => {
+    console.error('Unable to connect to MongoDB', err);
 });

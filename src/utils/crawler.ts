@@ -8,7 +8,7 @@ type Crawl = {
     links?: CrawlLink[];
     status: CrawlStatus;
     startTime?: number;
-    done?: number;
+    endTime?: number;
 };
 
 type CrawlLink = {
@@ -34,34 +34,26 @@ class CrawlerWorker {
     crawls: Crawl[] = [];
     maxSiteConcurrency = 4;
     maxCrawlConcurrency = 5;
+    urlTimeout = 5000;
 
-    benchmarkMode = false;
-    benchmarkSites = ["martygriffinfineart.co.uk", "www.developherawards.com"];
+    benchmarkMode = true;
+    benchmarkSites = [
+        "mrdarrengriffin.com",
+        "martygriffinfineart.co.uk",
+        "www.developherawards.com",
+    ];
 
     statsGroup = "crawler";
 
     constructor() {}
 
     async start() {
-        Stats.set({
-            identifier: "crawler-status",
-            label: "Crawler status",
-            value: "Idle",
-            group: this.statsGroup,
-        });
         setInterval(() => {
             this.processCrawls();
         }, 1 * 5000);
     }
 
     async processCrawls() {
-        Stats.set({
-            identifier: "crawler-in-progress",
-            label: "Crawls in progress",
-            value: this.crawls.map((c) => c.id).join(", "),
-            group: this.statsGroup,
-        });
-
         const inProgressCrawls = this.crawls.filter(
             (crawl) =>
                 crawl.status === CrawlStatus.IN_PROGRESS ||
@@ -72,37 +64,45 @@ class CrawlerWorker {
             return;
         }
 
-        const sites = await Site.find({
-            $or: [
-                {
-                    crawl: null,
+        let sites;
+
+        if (this.benchmarkMode) {
+            sites = await Site.find({
+                uri: {
+                    $in: this.benchmarkSites,
+                    $nin: this.crawls.map((site) => site.id),
                 },
-                {
-                    "crawl.expires": null,
-                },
-                {
-                    "crawl.expires": {
-                        $lt: new Date(Date.now()),
+            }).limit(this.maxSiteConcurrency - inProgressCrawls.length);
+        } else {
+            sites = await Site.find({
+                $or: [
+                    {
+                        crawl: null,
                     },
+                    {
+                        "crawl.expires": null,
+                    },
+                    {
+                        "crawl.expires": {
+                            $lt: new Date(Date.now()),
+                        },
+                    },
+                ],
+                // Ignore sites that are already in progress
+                uri: {
+                    $nin: this.crawls.map((site) => site.id),
                 },
-            ],
-            // Ignore sites that are already in progress
-            uri: {
-                $nin: this.crawls.map((site) => site.id),
-            },
-        }).limit(this.maxSiteConcurrency - inProgressCrawls.length);
+            }).limit(this.maxSiteConcurrency - inProgressCrawls.length);
+        }
 
         if (!sites) return;
 
         sites.forEach(async (site) => {
-            //console.debug(`Crawling ${site.uri}`);
-
             const crawl: Crawl = {
                 id: site.uri,
                 status: CrawlStatus.IN_PROGRESS,
                 links: [],
                 startTime: performance.now(),
-                done: 0,
             };
             this.crawls.push(crawl);
 
@@ -112,25 +112,9 @@ class CrawlerWorker {
                 strategy: CrawlStrategy.FULL,
             });
 
-            const time = performance.now();
-            //console.info(`[${crawl.id}] Starting crawl`);
-
-            let interval = setInterval(() => {
-                //console.log(crawl);
-            }, 1000);
-
             this.crawl(crawl, async () => {
-                clearInterval(interval);
-                const now = performance.now();
-                // format
-                // console.info(
-                //     `[${crawl.id}] Crawl complete in ${this.formatTime(
-                //         now - time
-                //     )}`
-                // );
+                crawl.endTime = performance.now();
 
-                // console.info(`====================`);
-                // get response code totals
                 let codes = {};
                 crawl.links.forEach((link) => {
                     if (!link.result) return;
@@ -141,16 +125,8 @@ class CrawlerWorker {
                     }
                 });
 
-                //console.info(`[${crawl.id}] Response codes`);
-                // console.table(codes);
-
-                //console.info(
-                //    `[${crawl.id}] Total links: ${crawl.links.length}`
-                //);
-
                 crawl.status = CrawlStatus.COMPLETE;
 
-                // Save the crawl
                 site.crawl = {
                     expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
                     stats: {
@@ -163,37 +139,18 @@ class CrawlerWorker {
                         }),
                         totalUrls: crawl.links.length,
                     },
-                    //expires: new Date(Date.now() + 1000 * 30)
                 };
                 await site.save();
+
+                setTimeout(() => {
+                    this.crawls = this.crawls.filter((c) => c.id !== crawl.id);
+                }, 1000 * 10);
             });
         });
     }
 
     async crawl(crawl: Crawl, onComplete: () => void) {
-        let done = crawl.links.filter(
-            (l) =>
-                l.status === CrawlStatus.COMPLETE ||
-                l.status === CrawlStatus.FAILED
-        );
-        Stats.set({
-            identifier: `crawler-${crawl.id}-live`,
-            label: `${crawl.id} running now`,
-            value: `${
-                crawl.links.filter((l) => l.status == CrawlStatus.IN_PROGRESS)
-                    .length
-            }`,
-            group: this.statsGroup,
-        });
-        Stats.set({
-            identifier: `crawler-${crawl.id}-progress`,
-            label: `${crawl.id} progress`,
-            value: `${done.length} / ${crawl.links.length} (${(
-                (done.length / crawl.links.length) *
-                100
-            ).toFixed(2)}%)`,
-            group: this.statsGroup,
-        });
+        this.debug();
         if (
             crawl.links.filter(
                 (l) =>
@@ -216,7 +173,6 @@ class CrawlerWorker {
         );
 
         // sort by FULL then HEAD_ONLY
-
         let toCrawl = queued
             .sort((a, b) => {
                 if (a.strategy === CrawlStrategy.FULL) {
@@ -231,13 +187,7 @@ class CrawlerWorker {
 
         toCrawl.forEach((link) => {
             link.status = CrawlStatus.IN_PROGRESS;
-            // console.debug(
-            //     `[${crawl.id}][${done.length}/${crawl.links.length}][${
-            //         link.strategy
-            //     }][${this.formatTime(
-            //         performance.now() - crawl.startTime
-            //     )}] Crawling ${link.url}`
-            // );
+
             this.crawlUrl(link, crawl)
                 .then((response) => {
                     if (!response) {
@@ -266,42 +216,45 @@ class CrawlerWorker {
     async crawlUrl(link: CrawlLink, crawl: Crawl) {
         let urlSanitised = "https://" + link.url.replace(/https?:\/\//, "");
 
+        const abortController = new AbortController();
+
         let options: RequestInit = {
             method: "HEAD",
             redirect: "manual",
             headers: {
                 "User-Agent": "Googlebot",
             },
+            signal: abortController.signal,
         };
 
         if (link.strategy === CrawlStrategy.FULL) {
             options.method = "GET";
         }
 
-        try {
-            const response = await fetch(urlSanitised, options);
-
-            // if we are redirected, we need to fetch the new url
-            if (response.redirected) {
-                const newUrl = response.headers.get("location");
-                // and doesnt already exist in the crawl
-                if (
-                    newUrl &&
-                    crawl.links.find((l) => l.url === newUrl) === undefined
-                ) {
-                    crawl.links.push({
-                        url: newUrl,
-                        status: CrawlStatus.QUEUED,
-                        strategy: CrawlStrategy.FULL,
-                    });
+        setTimeout(() => abortController.abort("test"), this.urlTimeout);
+        return fetch(urlSanitised, options)
+            .then((response) => {
+                // if we are redirected, we need to fetch the new url
+                if (response.redirected) {
+                    const newUrl = response.headers.get("location");
+                    // and doesnt already exist in the crawl
+                    if (
+                        newUrl &&
+                        crawl.links.find((l) => l.url === newUrl) === undefined
+                    ) {
+                        crawl.links.push({
+                            url: newUrl,
+                            status: CrawlStatus.QUEUED,
+                            strategy: CrawlStrategy.FULL,
+                        });
+                    }
                 }
-            }
 
-            return response;
-        } catch (e) {
-            //console.error(`[${crawl.id}] Error crawling ${urlSanitised}: ${e}`);
-            return false;
-        }
+                return response;
+            })
+            .catch((e) => {
+                console.log(e);
+            });
     }
 
     async discoverLinks(response: Response, link: CrawlLink, crawl: Crawl) {
@@ -416,11 +369,6 @@ class CrawlerWorker {
             crawl.links.push(prospectLink);
             added++;
         });
-
-        // Log how many links we added
-        if (added > 0) {
-            //console.debug(`[${crawl.id}] Discovered ${added} links`);
-        }
     }
 
     formatTime(milliseconds: number): string {
@@ -438,6 +386,121 @@ class CrawlerWorker {
         } else {
             return `${formattedMinutes}:${formattedSeconds}`;
         }
+    }
+
+    debug() {
+        Stats.set({
+            identifier: "crawler-in-progress",
+            label: "Crawls in progress",
+            value: this.crawls.map((c) => c.id).join(", "),
+            group: this.statsGroup,
+        });
+        Stats.set({
+            identifier: "crawler-spacer",
+            label: "",
+            value: "",
+            group: this.statsGroup,
+        });
+        this.crawls.forEach((crawl) => {
+            let statuses = {};
+            let codes = {
+                unknown: 0,
+            };
+
+            let done = crawl.links.filter(
+                (l) =>
+                    l.status === CrawlStatus.COMPLETE ||
+                    l.status === CrawlStatus.FAILED
+            );
+
+            crawl.links.forEach((link) => {
+                if (!statuses[link.status]) {
+                    statuses[link.status] = 0;
+                }
+                statuses[link.status]++;
+            });
+
+            let duration = 0;
+            if (crawl.status == CrawlStatus.COMPLETE) {
+                duration = crawl.endTime - crawl.startTime;
+            } else {
+                duration = performance.now() - crawl.startTime;
+            }
+
+            Stats.set({
+                identifier: `crawler-${crawl.id}-duration`,
+                label: `${crawl.id} duration`,
+                value: this.formatTime(duration),
+                group: this.statsGroup,
+            });
+
+            Stats.set({
+                identifier: `crawler-${crawl.id}-status`,
+                label: `${crawl.id} status`,
+                value: crawl.status,
+                group: this.statsGroup,
+            });
+
+            Stats.set({
+                identifier: `crawler-${crawl.id}-statuses`,
+                label: `${crawl.id} statuses`,
+                value: Object.keys(statuses)
+                    .sort()
+                    .map((c) => {
+                        return `${c}: ${statuses[c]}`;
+                    })
+                    .join(", "),
+                group: this.statsGroup,
+            });
+
+            crawl.links.forEach((link) => {
+                if (
+                    !(
+                        link.status == CrawlStatus.COMPLETE ||
+                        link.status == CrawlStatus.FAILED
+                    )
+                ) {
+                    return;
+                }
+                if (!link.result) {
+                    codes["unknown"]++;
+                    return;
+                }
+                if (!codes[link.result.status]) {
+                    codes[link.result.status] = 0;
+                }
+                codes[link.result.status]++;
+            });
+
+            Stats.set({
+                identifier: `crawler-${crawl.id}-codes`,
+                label: `${crawl.id} codes`,
+                value: Object.keys(codes)
+                    .sort()
+                    .map((c) => {
+                        return `${c}: ${codes[c]}`;
+                    })
+                    .join(", "),
+                group: this.statsGroup,
+            });
+
+            Stats.set({
+                identifier: `crawler-${crawl.id}-progress`,
+                label: `${crawl.id} progress`,
+                value: `${done.length} / ${crawl.links.length} (${(
+                    (done.length / crawl.links.length) *
+                    100
+                ).toFixed(2)}%)`,
+                group: this.statsGroup,
+            });
+
+            Stats.set({
+                identifier: `crawler-${crawl.id}-spacer`,
+                label: "",
+                value: "",
+                group: this.statsGroup,
+            });
+        });
     }
 }
 

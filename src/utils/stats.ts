@@ -16,6 +16,7 @@ class Stats {
         } else {
             this.stats[index] = data;
         }
+        Stats.display();
     }
 
     static get(identifier: string) {
@@ -35,6 +36,13 @@ class Stats {
 
     static removeGroup(group: string) {
         this.stats = this.stats.filter((stat) => stat.group !== group);
+    }
+
+    static display(){
+        console.clear();
+        Stats.getAll().forEach((stat) => {
+            console.log(`[${stat.group}] ${stat.label}: ${stat.value}`)
+        });
     }
 }
 
