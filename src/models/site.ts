@@ -24,15 +24,18 @@ const siteSchema = new Schema<ISite>({
     },
     crawl: {
         expires: Date,
+        startTime: Number,
+        status: String,
         stats: {
-            totalUrls: Number,
+            total: Number,
+            done: Number,
             responseCodeTotals: [{ code: Number, count: Number }],
         },
         results: [
             {
                 url: String,
-                redirectDestination: String,
                 response: Number,
+                redirect: String,
             },
         ],
     },

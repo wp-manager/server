@@ -36,11 +36,12 @@ class CrawlerWorker {
     maxCrawlConcurrency = 5;
     urlTimeout = 5000;
 
-    benchmarkMode = true;
+    benchmarkMode = false;
     benchmarkSites = [
         "mrdarrengriffin.com",
         "martygriffinfineart.co.uk",
         "www.developherawards.com",
+        "rachels-sewing.co.uk"
     ];
 
     statsGroup = "crawler";
@@ -112,7 +113,58 @@ class CrawlerWorker {
                 strategy: CrawlStrategy.FULL,
             });
 
+            site.crawl = {
+                status: crawl.status,
+            };
+            await site.save();
+
+            // periodically update the DB with the crawl status
+            let periodicSave = setInterval(async () => {
+                if(crawl.status === CrawlStatus.COMPLETE) return;
+
+                let codes = {};
+                crawl.links.forEach((link) => {
+                    if (!link.result) return;
+                    if (!codes[link.result.status]) {
+                        codes[link.result.status] = 1;
+                    } else {
+                        codes[link.result.status]++;
+                    }
+                });
+
+                let results = crawl.links
+                    .filter((l) => l.result && l.result.status !== 200)
+                    .map((l) => {
+                        return {
+                            url: l.url,
+                            response: l.result.status,
+                            redirect: l.result.headers.get("location"),
+                        };
+                    });
+
+                site.crawl = {
+                    status: crawl.status,
+                    startTime: crawl.startTime,
+                    stats: {
+                        responseCodeTotals: Object.keys(codes).map((c) => {
+                            let count = codes[c];
+                            return {
+                                code: parseInt(c),
+                                count: parseInt(count),
+                            };
+                        }),
+                        total: crawl.links.length,
+                        done: crawl.links.filter(
+                            (l) => l.status === CrawlStatus.COMPLETE || l.status === CrawlStatus.FAILED
+                        ).length,
+                    },
+                    results
+                };
+                await site.save();
+            }, 5000);
+
             this.crawl(crawl, async () => {
+                clearInterval(periodicSave);
                 crawl.endTime = performance.now();
 
                 let codes = {};
@@ -127,8 +179,21 @@ class CrawlerWorker {
 
                 crawl.status = CrawlStatus.COMPLETE;
 
+                // get all results that arenot 200
+                let results = crawl.links
+                    .filter((l) => l.result && l.result.status !== 200)
+                    .map((l) => {
+                        return {
+                            url: l.url,
+                            response: l.result.status,
+                            redirect: l.result.headers.get("location"),
+                        };
+                    });
+
                 site.crawl = {
                     expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+                    status: crawl.status,
+                    startTime: crawl.startTime,
                     stats: {
                         responseCodeTotals: Object.keys(codes).map((c) => {
                             let count = codes[c];
@@ -137,14 +202,14 @@ class CrawlerWorker {
                                 count: parseInt(count),
                             };
                         }),
-                        totalUrls: crawl.links.length,
+                        total: crawl.links.length,
+                        done: crawl.links.filter(
+                            (l) => l.status === CrawlStatus.COMPLETE || l.status === CrawlStatus.FAILED
+                        ).length,
                     },
+                    results
                 };
                 await site.save();
-
-                setTimeout(() => {
-                    this.crawls = this.crawls.filter((c) => c.id !== crawl.id);
-                }, 1000 * 10);
             });
         });
     }
@@ -187,7 +252,7 @@ class CrawlerWorker {
 
         toCrawl.forEach((link) => {
             link.status = CrawlStatus.IN_PROGRESS;
-
+            try {
             this.crawlUrl(link, crawl)
                 .then((response) => {
                     if (!response) {
@@ -210,6 +275,10 @@ class CrawlerWorker {
                     link.status = CrawlStatus.FAILED;
                     this.crawl(crawl, onComplete);
                 });
+            } catch (e) {
+                link.status = CrawlStatus.FAILED;
+                this.crawl(crawl, onComplete);
+            }
         });
     }
 
@@ -231,7 +300,13 @@ class CrawlerWorker {
             options.method = "GET";
         }
 
-        setTimeout(() => abortController.abort("test"), this.urlTimeout);
+        setTimeout(() => {
+            if(link.status === CrawlStatus.IN_PROGRESS) {
+                abortController.abort();
+                link.status = CrawlStatus.FAILED;
+            }
+        } , this.urlTimeout);
+
         return fetch(urlSanitised, options)
             .then((response) => {
                 // if we are redirected, we need to fetch the new url

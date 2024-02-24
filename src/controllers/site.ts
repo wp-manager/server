@@ -15,7 +15,7 @@ const siteExists = async (req, res, next) => {
     let siteAuth = await SiteAuth.findOne({
         user: req.user,
         site: site,
-    });
+    }).projection({ _id: 0});
 
     if (!siteAuth) {
         res.status(404).json({

@@ -23,29 +23,9 @@ router.get("/:uri/crawl", JWTUtils.authorisedUserMiddleware, siteExists, async (
     }
 
     if(site.crawl){
-        res.json(site.crawl.stats);
+        res.json(site.crawl);
     };
 });
-
-router.get("/:uri/crawl/results", JWTUtils.authorisedUserMiddleware, siteExists, async (req, res) => {
-    //@ts-ignore
-    if(!req.site){
-        res.status(400).send();
-        return;
-    }
-    //@ts-ignore
-    const site = req.site;
-
-    if(!site){
-        res.status(400).send();
-        return;
-    }
-
-    if(site.crawl){
-        res.json(site.crawl.results);
-    };
-});
-
 
 router.all("/:uri/wp-json/*", JWTUtils.authorisedUserMiddleware, siteExists, proxySite);
 

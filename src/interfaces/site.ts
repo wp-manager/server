@@ -21,15 +21,18 @@ interface ISite {
     },
     crawl: {
         expires: Date;
+        startTime: number;
+        status: string;
         stats?: {
-            totalUrls: number;
+            total: number;
+            done: number;
             responseCodeTotals: { code: number, count: number }[];
         },
         results?: [
             {
                 url: string;
-                redirectDestination: string;
                 response: number;
+                redirect?: string;
             }
         ]
     }

@@ -13,7 +13,9 @@ class Stats {
         const index = this.stats.findIndex((stat) => stat.identifier === data.identifier);
         if (index === -1) {
             this.stats.push(data);
+        
         } else {
+            if(this.stats[index].value === data.value) return;
             this.stats[index] = data;
         }
         Stats.display();
