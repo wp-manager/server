@@ -253,7 +253,7 @@ class CrawlerWorker {
         // If the crawl is still in progress, we should save again in a few seconds
         setTimeout(() => {
             this.periodicSave(site, crawl);
-        }, 1000 * 2);
+        }, 1000);
     }
 
     async crawlUrl(link: CrawlLink, crawl: Crawl) {
