@@ -23,8 +23,8 @@ const siteSchema = new Schema<ISite>({
         },
     },
     crawl: {
-        expires: Date,
         startTime: Number,
+        endTime: Number,
         status: String,
         stats: {
             total: Number,
@@ -35,6 +35,7 @@ const siteSchema = new Schema<ISite>({
             {
                 url: String,
                 response: Number,
+                responseText: String,
                 redirect: String,
             },
         ],

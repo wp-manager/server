@@ -20,8 +20,8 @@ interface ISite {
         }
     },
     crawl: {
-        expires: Date;
         startTime: number;
+        endTime: number;
         status: string;
         stats?: {
             total: number;
@@ -32,6 +32,7 @@ interface ISite {
             {
                 url: string;
                 response: number;
+                responseText: string;
                 redirect?: string;
             }
         ]

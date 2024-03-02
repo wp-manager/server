@@ -1,8 +1,6 @@
 import Site from "../models/site";
-import User from "../models/user";
-import SiteAuth from "../models/site-auth";
 import * as cheerio from "cheerio";
-import Stats from "./stats";
+
 type Crawl = {
     id: string;
     links?: CrawlLink[];
@@ -18,7 +16,7 @@ type CrawlLink = {
     status: CrawlStatus;
 };
 
-enum CrawlStatus {
+export enum CrawlStatus {
     QUEUED = "QUEUED",
     IN_PROGRESS = "IN_PROGRESS",
     COMPLETE = "COMPLETE",
@@ -26,7 +24,7 @@ enum CrawlStatus {
 }
 
 enum CrawlStrategy {
-    HEAD_ONLY = "HEAD_ONLY",
+    HEAD = "HEAD",
     FULL = "FULL",
 }
 
@@ -34,24 +32,26 @@ class CrawlerWorker {
     crawls: Crawl[] = [];
     maxSiteConcurrency = 4;
     maxCrawlConcurrency = 5;
-    urlTimeout = 5000;
+    urlTimeout = 1000 * 10; // 10 seconds
 
     benchmarkMode = false;
-    benchmarkSites = [
-        "mrdarrengriffin.com",
-        "martygriffinfineart.co.uk",
-        "www.developherawards.com",
-        "rachels-sewing.co.uk"
-    ];
-
-    statsGroup = "crawler";
-
-    constructor() {}
+    benchmarkSites = ["mrdarrengriffin.com"];
 
     async start() {
+        await this.clearInProgressCrawls();
         setInterval(() => {
             this.processCrawls();
         }, 1 * 5000);
+    }
+
+    async clearInProgressCrawls() {
+        let sites = await Site.find({
+            "crawl.status": CrawlStatus.IN_PROGRESS,
+        });
+        sites.forEach(async (site) => {
+            site.crawl.status = CrawlStatus.FAILED;
+            await site.save();
+        });
     }
 
     async processCrawls() {
@@ -73,26 +73,15 @@ class CrawlerWorker {
                     $in: this.benchmarkSites,
                     $nin: this.crawls.map((site) => site.id),
                 },
+                "crawl.status": CrawlStatus.QUEUED,
             }).limit(this.maxSiteConcurrency - inProgressCrawls.length);
         } else {
             sites = await Site.find({
-                $or: [
-                    {
-                        crawl: null,
-                    },
-                    {
-                        "crawl.expires": null,
-                    },
-                    {
-                        "crawl.expires": {
-                            $lt: new Date(Date.now()),
-                        },
-                    },
-                ],
                 // Ignore sites that are already in progress
                 uri: {
-                    $nin: this.crawls.map((site) => site.id),
+                    $nin: this.crawls.map((crawl) => crawl.id),
                 },
+                "crawl.status": CrawlStatus.QUEUED,
             }).limit(this.maxSiteConcurrency - inProgressCrawls.length);
         }
 
@@ -103,7 +92,7 @@ class CrawlerWorker {
                 id: site.uri,
                 status: CrawlStatus.IN_PROGRESS,
                 links: [],
-                startTime: performance.now(),
+                startTime: Date.now(),
             };
             this.crawls.push(crawl);
 
@@ -114,130 +103,45 @@ class CrawlerWorker {
             });
 
             site.crawl = {
-                status: crawl.status,
+                status: CrawlStatus.IN_PROGRESS,
             };
-            await site.save();
 
-            // periodically update the DB with the crawl status
-            let periodicSave = setInterval(async () => {
-                if(crawl.status === CrawlStatus.COMPLETE) return;
+            this.periodicSave(site, crawl);
 
-                let codes = {};
-                crawl.links.forEach((link) => {
-                    if (!link.result) return;
-                    if (!codes[link.result.status]) {
-                        codes[link.result.status] = 1;
-                    } else {
-                        codes[link.result.status]++;
-                    }
-                });
-
-                let results = crawl.links
-                    .filter((l) => l.result && l.result.status !== 200)
-                    .map((l) => {
-                        return {
-                            url: l.url,
-                            response: l.result.status,
-                            redirect: l.result.headers.get("location"),
-                        };
-                    });
-
-                site.crawl = {
-                    status: crawl.status,
-                    startTime: crawl.startTime,
-                    stats: {
-                        responseCodeTotals: Object.keys(codes).map((c) => {
-                            let count = codes[c];
-                            return {
-                                code: parseInt(c),
-                                count: parseInt(count),
-                            };
-                        }),
-                        total: crawl.links.length,
-                        done: crawl.links.filter(
-                            (l) => l.status === CrawlStatus.COMPLETE || l.status === CrawlStatus.FAILED
-                        ).length,
-                    },
-                    results
-                };
-                await site.save();
-            }, 5000);
-
+            console.log(`Crawling ${site.uri}`);
             this.crawl(crawl, async () => {
-                clearInterval(periodicSave);
-                crawl.endTime = performance.now();
-
-                let codes = {};
-                crawl.links.forEach((link) => {
-                    if (!link.result) return;
-                    if (!codes[link.result.status]) {
-                        codes[link.result.status] = 1;
-                    } else {
-                        codes[link.result.status]++;
-                    }
-                });
-
+                crawl.endTime = Date.now();
                 crawl.status = CrawlStatus.COMPLETE;
-
-                // get all results that arenot 200
-                let results = crawl.links
-                    .filter((l) => l.result && l.result.status !== 200)
-                    .map((l) => {
-                        return {
-                            url: l.url,
-                            response: l.result.status,
-                            redirect: l.result.headers.get("location"),
-                        };
-                    });
-
-                site.crawl = {
-                    expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
-                    status: crawl.status,
-                    startTime: crawl.startTime,
-                    stats: {
-                        responseCodeTotals: Object.keys(codes).map((c) => {
-                            let count = codes[c];
-                            return {
-                                code: parseInt(c),
-                                count: parseInt(count),
-                            };
-                        }),
-                        total: crawl.links.length,
-                        done: crawl.links.filter(
-                            (l) => l.status === CrawlStatus.COMPLETE || l.status === CrawlStatus.FAILED
-                        ).length,
-                    },
-                    results
-                };
-                await site.save();
+                console.log(`Crawl of ${site.uri} complete`);
             });
         });
     }
 
-    async crawl(crawl: Crawl, onComplete: () => void) {
-        this.debug();
-        if (
-            crawl.links.filter(
-                (l) =>
-                    l.status === CrawlStatus.COMPLETE ||
-                    l.status === CrawlStatus.FAILED
-            ).length === crawl.links.length
-        ) {
-            onComplete();
-        }
-        // skip if we have 2 or more in progress
-        const inProgress = crawl.links.filter(
-            (q) => q.status === CrawlStatus.IN_PROGRESS
+    async crawl(crawl: Crawl, completeFn: () => void) {
+        const done = crawl.links.filter(
+            (l) =>
+                l.status === CrawlStatus.COMPLETE ||
+                l.status === CrawlStatus.FAILED
         );
-        if (inProgress.length >= this.maxCrawlConcurrency) {
-            return;
-        }
+
+        const inProgress = crawl.links.filter(
+            (l) => l.status === CrawlStatus.IN_PROGRESS
+        );
 
         const queued = crawl.links.filter(
             (q) => q.status === CrawlStatus.QUEUED
         );
 
-        // sort by FULL then HEAD_ONLY
+        if (done.length === crawl.links.length) {
+            completeFn();
+        }
+
+        // skip if we have too many in progress than what the max concurrency allows
+        if (inProgress.length >= this.maxCrawlConcurrency) {
+            return;
+        }
+
+        // sort by FULL then HEAD
         let toCrawl = queued
             .sort((a, b) => {
                 if (a.strategy === CrawlStrategy.FULL) {
@@ -252,34 +156,104 @@ class CrawlerWorker {
 
         toCrawl.forEach((link) => {
             link.status = CrawlStatus.IN_PROGRESS;
-            try {
-            this.crawlUrl(link, crawl)
-                .then((response) => {
-                    if (!response) {
-                        link.status = CrawlStatus.FAILED;
-                        this.crawl(crawl, onComplete);
-                        return;
-                    }
-                    link.result = response;
-                    link.status = CrawlStatus.COMPLETE;
 
-                    if (link.strategy == CrawlStrategy.FULL) {
-                        this.discoverLinks(response, link, crawl).then(() => {
-                            this.crawl(crawl, onComplete);
-                        });
-                    } else {
-                        this.crawl(crawl, onComplete);
-                    }
-                })
-                .catch((e) => {
-                    link.status = CrawlStatus.FAILED;
-                    this.crawl(crawl, onComplete);
-                });
+            try {
+                this.crawlUrl(link, crawl)
+                    .then((response) => {
+                        if (!response) {
+                            link.status = CrawlStatus.FAILED;
+                            this.crawl(crawl, completeFn);
+                            return;
+                        }
+
+                        link.result = response;
+                        link.status = CrawlStatus.COMPLETE;
+
+                        if (link.strategy == CrawlStrategy.FULL) {
+                            this.discoverLinks(response, link, crawl).then(
+                                () => {
+                                    this.crawl(crawl, completeFn);
+                                }
+                            );
+                        } else {
+                            this.crawl(crawl, completeFn);
+                        }
+                    })
+                    .catch((e) => {
+                        link.status = CrawlStatus.FAILED;
+                        this.crawl(crawl, completeFn);
+                    });
             } catch (e) {
                 link.status = CrawlStatus.FAILED;
-                this.crawl(crawl, onComplete);
+                this.crawl(crawl, completeFn);
             }
         });
+    }
+
+    async periodicSave(site, crawl: Crawl) {
+        let codes = {};
+        crawl.links.reduce((acc, link) => {
+            if (!link.result) return acc;
+            if (!acc[link.result.status]) {
+                acc[link.result.status] = 1;
+            } else {
+                acc[link.result.status]++;
+            }
+            return acc;
+        }, codes);
+
+        let results = crawl.links
+            .map((l) => {
+                if (!l.result) return;
+                // if result was 200 OK, we don't need to store the response text
+                //if (l.result.ok) return;
+                return {
+                    url: l.url,
+                    response: l.result.status,
+                    responseText: l.result.statusText,
+                    redirect: l.result.headers.get("location")
+                        ? l.result.headers.get("location")
+                        : null,
+                };
+            })
+            .filter((r) => r);
+
+        site.crawl = {
+            status: crawl.status,
+            startTime: crawl.startTime,
+            stats: {
+                responseCodeTotals: Object.keys(codes).map((c) => {
+                    let count = codes[c];
+                    return {
+                        code: parseInt(c),
+                        count: parseInt(count),
+                    };
+                }),
+                total: crawl.links.length,
+                done: crawl.links.filter(
+                    (l) =>
+                        l.status === CrawlStatus.COMPLETE ||
+                        l.status === CrawlStatus.FAILED
+                ).length,
+            },
+            results,
+        };
+
+        if (crawl.status === CrawlStatus.COMPLETE) {
+            site.crawl.endTime = crawl.endTime;
+        }
+
+        await site.save();
+
+        if (crawl.status === CrawlStatus.COMPLETE) {
+            this.crawls = this.crawls.filter((c) => c.id !== crawl.id);
+            return;
+        }
+
+        // If the crawl is still in progress, we should save again in a few seconds
+        setTimeout(() => {
+            this.periodicSave(site, crawl);
+        }, 1000 * 2);
     }
 
     async crawlUrl(link: CrawlLink, crawl: Crawl) {
@@ -300,19 +274,29 @@ class CrawlerWorker {
             options.method = "GET";
         }
 
+        console.log(`[${link.strategy}] ${urlSanitised}`);
+
+        // if url is not on the same origin, we should not crawl it
+        if (
+            !urlSanitised.startsWith(
+                "https://" + crawl.links[0].url.replace(/https?:\/\//, "")
+            )
+        ) {
+            return;
+        }
+
         setTimeout(() => {
-            if(link.status === CrawlStatus.IN_PROGRESS) {
+            if (link.status === CrawlStatus.IN_PROGRESS) {
                 abortController.abort();
                 link.status = CrawlStatus.FAILED;
             }
-        } , this.urlTimeout);
+        }, this.urlTimeout);
 
         return fetch(urlSanitised, options)
             .then((response) => {
                 // if we are redirected, we need to fetch the new url
-                if (response.redirected) {
-                    const newUrl = response.headers.get("location");
-                    // and doesnt already exist in the crawl
+                if (response.headers.get("location")) {
+                    const newUrl = response.headers.get("location"); // and doesnt already exist in the crawl
                     if (
                         newUrl &&
                         crawl.links.find((l) => l.url === newUrl) === undefined
@@ -334,7 +318,7 @@ class CrawlerWorker {
 
     async discoverLinks(response: Response, link: CrawlLink, crawl: Crawl) {
         // If the strategy is to only do a HEAD request, there will be no body to parse, so let's skip
-        if (link.strategy === CrawlStrategy.HEAD_ONLY) {
+        if (link.strategy === CrawlStrategy.HEAD) {
             return;
         }
 
@@ -383,7 +367,7 @@ class CrawlerWorker {
                     prospectLinks.push({
                         url,
                         status: CrawlStatus.QUEUED,
-                        strategy: CrawlStrategy.HEAD_ONLY,
+                        strategy: CrawlStrategy.HEAD,
                     });
                 });
             });
@@ -426,19 +410,22 @@ class CrawlerWorker {
                 return;
             }
 
+            // remove any hash
+            prospectLink.url = prospectLink.url.split("#")[0];
+
             if (crawl.links.find((l) => l.url === prospectLink.url)) {
                 return;
             }
 
             // get the URL without any get or hash
-            let rawUrl = prospectLink.url.split("?")[0].split("#")[0];
+            let rawUrl = prospectLink.url.split("?")[0];
             if (
                 // if the url has an image extension
                 rawUrl.match(/\.(jpeg|jpg|gif|png|svg|webp|avif)$/) ||
                 // if the url has a css or js extension
                 rawUrl.match(/\.(css|js)$/)
             ) {
-                prospectLink.strategy = CrawlStrategy.HEAD_ONLY;
+                prospectLink.strategy = CrawlStrategy.HEAD;
             }
 
             crawl.links.push(prospectLink);
@@ -461,121 +448,6 @@ class CrawlerWorker {
         } else {
             return `${formattedMinutes}:${formattedSeconds}`;
         }
-    }
-
-    debug() {
-        Stats.set({
-            identifier: "crawler-in-progress",
-            label: "Crawls in progress",
-            value: this.crawls.map((c) => c.id).join(", "),
-            group: this.statsGroup,
-        });
-        Stats.set({
-            identifier: "crawler-spacer",
-            label: "",
-            value: "",
-            group: this.statsGroup,
-        });
-        this.crawls.forEach((crawl) => {
-            let statuses = {};
-            let codes = {
-                unknown: 0,
-            };
-
-            let done = crawl.links.filter(
-                (l) =>
-                    l.status === CrawlStatus.COMPLETE ||
-                    l.status === CrawlStatus.FAILED
-            );
-
-            crawl.links.forEach((link) => {
-                if (!statuses[link.status]) {
-                    statuses[link.status] = 0;
-                }
-                statuses[link.status]++;
-            });
-
-            let duration = 0;
-            if (crawl.status == CrawlStatus.COMPLETE) {
-                duration = crawl.endTime - crawl.startTime;
-            } else {
-                duration = performance.now() - crawl.startTime;
-            }
-
-            Stats.set({
-                identifier: `crawler-${crawl.id}-duration`,
-                label: `${crawl.id} duration`,
-                value: this.formatTime(duration),
-                group: this.statsGroup,
-            });
-
-            Stats.set({
-                identifier: `crawler-${crawl.id}-status`,
-                label: `${crawl.id} status`,
-                value: crawl.status,
-                group: this.statsGroup,
-            });
-
-            Stats.set({
-                identifier: `crawler-${crawl.id}-statuses`,
-                label: `${crawl.id} statuses`,
-                value: Object.keys(statuses)
-                    .sort()
-                    .map((c) => {
-                        return `${c}: ${statuses[c]}`;
-                    })
-                    .join(", "),
-                group: this.statsGroup,
-            });
-
-            crawl.links.forEach((link) => {
-                if (
-                    !(
-                        link.status == CrawlStatus.COMPLETE ||
-                        link.status == CrawlStatus.FAILED
-                    )
-                ) {
-                    return;
-                }
-                if (!link.result) {
-                    codes["unknown"]++;
-                    return;
-                }
-                if (!codes[link.result.status]) {
-                    codes[link.result.status] = 0;
-                }
-                codes[link.result.status]++;
-            });
-
-            Stats.set({
-                identifier: `crawler-${crawl.id}-codes`,
-                label: `${crawl.id} codes`,
-                value: Object.keys(codes)
-                    .sort()
-                    .map((c) => {
-                        return `${c}: ${codes[c]}`;
-                    })
-                    .join(", "),
-                group: this.statsGroup,
-            });
-
-            Stats.set({
-                identifier: `crawler-${crawl.id}-progress`,
-                label: `${crawl.id} progress`,
-                value: `${done.length} / ${crawl.links.length} (${(
-                    (done.length / crawl.links.length) *
-                    100
-                ).toFixed(2)}%)`,
-                group: this.statsGroup,
-            });
-
-            Stats.set({
-                identifier: `crawler-${crawl.id}-spacer`,
-                label: "",
-                value: "",
-                group: this.statsGroup,
-            });
-        });
     }
 }
 
