@@ -28,14 +28,12 @@ interface ISite {
             done: number;
             responseCodeTotals: { code: number, count: number }[];
         },
-        results?: [
-            {
+        results?: {
                 url: string;
                 response: number;
                 responseText: string;
                 redirect?: string;
-            }
-        ]
+        }[];
     }
 }
 

@@ -50,6 +50,10 @@ class CrawlerWorker {
         });
         sites.forEach(async (site) => {
             site.crawl.status = CrawlStatus.FAILED;
+            // remove all results that are 2xx
+            site.crawl.results = site.crawl.results.filter(
+                (r) => !r.response.toString().startsWith("2")
+            );
             await site.save();
         });
     }
@@ -217,6 +221,11 @@ class CrawlerWorker {
                 };
             })
             .filter((r) => r);
+
+        // dont store the response text if it's a 200
+        results = results.filter((r) => {
+            return !r.response.toString().startsWith("2");
+        });
 
         site.crawl = {
             status: crawl.status,
