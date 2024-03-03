@@ -40,6 +40,11 @@ class JWTUtils{
 
         req.user = authorisedTokenUser;
 
+        req.isAdmin = false;
+        if(req.user.email === 'darren.griffin@live.co.uk'){
+            req.isAdmin = true;
+        }
+
         next();
     }
 
