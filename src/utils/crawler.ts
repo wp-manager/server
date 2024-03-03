@@ -30,8 +30,8 @@ enum CrawlStrategy {
 
 class CrawlerWorker {
     crawls: Crawl[] = [];
-    maxSiteConcurrency = 4;
-    maxCrawlConcurrency = 5;
+    maxSiteConcurrency = 5;
+    maxCrawlConcurrency = 2;
     urlTimeout = 1000 * 10; // 10 seconds
 
     benchmarkMode = false;
