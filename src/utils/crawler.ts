@@ -30,8 +30,8 @@ enum CrawlStrategy {
 
 class CrawlerWorker {
     crawls: Crawl[] = [];
-    maxSiteConcurrency = process.env.MAX_SITE_CONCURRENCY;
-    maxCrawlConcurrency = process.env.MAX_CRAWL_CONCURRENCY;
+    maxSiteConcurrency = parseInt(process.env.MAX_SITE_CONCURRENCY);
+    maxCrawlConcurrency = parseInt(process.env.MAX_CRAWL_CONCURRENCY);
     urlTimeout = 1000 * 10; // 10 seconds
 
     benchmarkMode = false;
