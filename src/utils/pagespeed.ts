@@ -5,8 +5,8 @@ class PagespeedWorker {
     inProgress = [];
     maxConcurrency = parseInt(process.env.MAX_PARALLEL_PAGESPEEDS) || 2;
 
-    retryExpire = 30 * 60 * 1000; // 1 hour
-    successExpire = 7 * 24 * 60 * 60 * 1000; // 1 day
+    retryExpire = 30 * 60 * 1000; // 30 mins
+    successExpire = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     async start() {
         this.doJob();

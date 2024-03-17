@@ -6,8 +6,8 @@ class ScreenshotWorker {
     currentSite = null;
     maxConcurrency = parseInt(process.env.MAX_PARALLEL_SCREENSHOTS) || 2;
 
-    retryExpire = 30 * 60 * 1000; // 1 hour
-    successExpire = 7 * 24 * 60 * 60 * 1000; // 7 days
+    retryExpire = 60 * 60 * 1000; // 1 hour
+    successExpire = 1 * 24 * 60 * 60 * 1000; // 1 day
 
 
     async start() {
@@ -46,8 +46,6 @@ class ScreenshotWorker {
                 {
                     screenshotExpires: null,
                 },
-            ],
-            $and: [
                 {
                     screenshotExpires: {
                         $lt: new Date(Date.now()),
