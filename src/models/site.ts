@@ -37,6 +37,8 @@ const siteSchema = new Schema<ISite>({
                 response: Number,
                 responseText: String,
                 redirect: String,
+                inlinks: [String],
+                outlinks: [String],
             },
         ],
     },

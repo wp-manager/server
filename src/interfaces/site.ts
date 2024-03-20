@@ -33,6 +33,8 @@ interface ISite {
                 response: number;
                 responseText: string;
                 redirect?: string;
+                inlinks: string[];
+                outlinks: string[];
         }[];
     }
 }

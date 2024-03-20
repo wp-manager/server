@@ -14,6 +14,8 @@ type CrawlLink = {
     result?: Response;
     strategy?: CrawlStrategy;
     status: CrawlStatus;
+    inlinks?: string[];
+    outlinks?: string[];
 };
 
 export enum CrawlStatus {
@@ -104,6 +106,8 @@ class CrawlerWorker {
                 url: site.uri,
                 status: CrawlStatus.QUEUED,
                 strategy: CrawlStrategy.FULL,
+                outlinks: [],
+                inlinks: [],
             });
 
             site.crawl = {
@@ -216,16 +220,18 @@ class CrawlerWorker {
                     response: l.result.status,
                     responseText: l.result.statusText,
                     redirect: l.result.headers.get("location")
-                        ? l.result.headers.get("location")
-                        : null,
+                    ? l.result.headers.get("location")
+                    : null,
+                    inlinks: l.inlinks,
+                    outlinks: l.outlinks,
                 };
             })
             .filter((r) => r);
 
         // dont store the response text if it's a 200
-        results = results.filter((r) => {
-            return !r.response.toString().startsWith("2");
-        });
+        // results = results.filter((r) => {
+        //     return !r.response.toString().startsWith("2");
+        // });
 
         site.crawl = {
             status: crawl.status,
@@ -306,6 +312,9 @@ class CrawlerWorker {
                 // if we are redirected, we need to fetch the new url
                 if (response.headers.get("location")) {
                     const newUrl = response.headers.get("location"); // and doesnt already exist in the crawl
+
+
+
                     if (
                         newUrl &&
                         crawl.links.find((l) => l.url === newUrl) === undefined
@@ -314,6 +323,7 @@ class CrawlerWorker {
                             url: newUrl,
                             status: CrawlStatus.QUEUED,
                             strategy: CrawlStrategy.FULL,
+                            inlinks: [urlSanitised],
                         });
                     }
                 }
@@ -359,6 +369,8 @@ class CrawlerWorker {
                 url,
                 status: CrawlStatus.QUEUED,
                 strategy: CrawlStrategy.FULL,
+                inlinks: [link.url],
+                outlinks: [],
             });
         });
 
@@ -377,6 +389,8 @@ class CrawlerWorker {
                         url,
                         status: CrawlStatus.QUEUED,
                         strategy: CrawlStrategy.HEAD,
+                        inlinks: [link.url],
+                        outlinks: [],
                     });
                 });
             });
@@ -400,8 +414,14 @@ class CrawlerWorker {
                 url,
                 status: CrawlStatus.QUEUED,
                 strategy: CrawlStrategy.FULL,
+                inlinks: [link.url],
+                outlinks: [],
             });
         });
+
+        if(!prospectLinks.length){
+            return;
+        }
 
         // Go through all the prospect links and ensure there are
         // no duplicates, they are from the same origin
@@ -422,7 +442,17 @@ class CrawlerWorker {
             // remove any hash
             prospectLink.url = prospectLink.url.split("#")[0];
 
-            if (crawl.links.find((l) => l.url === prospectLink.url)) {
+            // Add the found valid link as an outlink to the parent link
+            if(!link.outlinks.find((l) => l === prospectLink.url)){
+                link.outlinks.push(prospectLink.url);
+            }
+
+            let existingLink = crawl.links.find((l) => l.url === prospectLink.url);
+            
+            if (existingLink) {
+                if(!existingLink.inlinks.find((l) => l === link.url)){
+                    existingLink.inlinks.push(link.url);
+                }
                 return;
             }
 

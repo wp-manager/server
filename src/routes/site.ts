@@ -57,7 +57,8 @@ router.post("/:uri/crawl", JWTUtils.authorisedUserMiddleware, siteExists, async 
 
     // Only allow queueing if the last crawl was more than 1 day
     if(site.crawl.endTime){
-        const oneDay = 1000 * 60;
+        //const oneDay = 1000 * 60;
+        const oneDay = 1;
         if(site.crawl.endTime > (Date.now() - oneDay)){
             res.status(429).json({
                 message: `You cannot crawl a site that often. Please try again after ${new Date(site.crawl.endTime + oneDay).toLocaleString()}`
