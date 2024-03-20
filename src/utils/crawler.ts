@@ -229,9 +229,9 @@ class CrawlerWorker {
             .filter((r) => r);
 
         // dont store the response text if it's a 200
-        // results = results.filter((r) => {
-        //     return !r.response.toString().startsWith("2");
-        // });
+        results = results.filter((r) => {
+            return !r.response.toString().startsWith("2");
+        });
 
         site.crawl = {
             status: crawl.status,
@@ -312,7 +312,7 @@ class CrawlerWorker {
                 // if we are redirected, we need to fetch the new url
                 if (response.headers.get("location")) {
                     const newUrl = response.headers.get("location"); // and doesnt already exist in the crawl
-                    
+
                     if (
                         newUrl &&
                         crawl.links.find((l) => l.url === newUrl) === undefined
