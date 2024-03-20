@@ -312,9 +312,7 @@ class CrawlerWorker {
                 // if we are redirected, we need to fetch the new url
                 if (response.headers.get("location")) {
                     const newUrl = response.headers.get("location"); // and doesnt already exist in the crawl
-
-
-
+                    
                     if (
                         newUrl &&
                         crawl.links.find((l) => l.url === newUrl) === undefined
@@ -324,6 +322,7 @@ class CrawlerWorker {
                             status: CrawlStatus.QUEUED,
                             strategy: CrawlStrategy.FULL,
                             inlinks: [urlSanitised],
+                            outlinks: [],
                         });
                     }
                 }
